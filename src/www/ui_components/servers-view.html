@@ -1,0 +1,180 @@
+<!--
+  Copyright 2018 The Outline Authors
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/brum-global-variable/brum-global-variable.html">
+<link rel="import" href="../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../bower_components/iron-icons/communication-icons.html">
+
+<link rel="import" href="../bower_components/paper-item/paper-icon-item.html">
+
+<link rel="import" href="server-list.html">
+<link rel="import" href="server-connection-viz.html">
+<link rel="import" href="user-comms-dialog.html">
+<link rel="import" href="add-server-view.html">
+
+<dom-module id="servers-view">
+  <template>
+    <style>
+      :host {
+        margin: 0!important;
+        width: 100%;
+        /* height: 100%; */
+        /* Use vh, as % does not work in iOS. |header-height|+|server-margin| = 64px.
+         * Subtract |header-height| to fix iOS padding, and |server-margin| to fix scrolling in Android.
+         */
+        height: -webkit-calc(100vh - 64px);
+        font-size: 14px;
+        line-height: 20px;
+      };
+
+      :host a {
+        color: var(--medium-green);
+        text-decoration: none;
+      }
+      /* Do not remove, this allows the hidden attribute to work with flex displays. */
+      [hidden] {
+        display: none !important;
+      }
+      .server-list-container {
+        background-color: #EFEFEF;
+        width: 100%;
+        height: 100%;
+      }
+      .flex-column-container {
+        margin: 0 auto;
+        width: 100%;
+        height: 100%;
+        text-align: center;
+        display: -webkit-flex;
+        -webkit-flex-wrap: wrap;
+        flex-wrap: wrap;
+        -webkit-flex-direction: column;
+        flex-direction: column;
+        -webkit-flex: 1;
+        flex: 1;
+        justify-content: center;
+      }
+      .header {
+        font-size: 20px;
+        color: rgba(0,0,0,0.87);
+        line-height: 32px;
+        margin-top: 34px;
+      }
+      .subtle {
+        color: rgba(0,0,0,0.54);
+      }
+      .footer {
+        margin: 0;
+        padding: 24px 0 16px 0;
+        border-top-width: 1px;
+        border-top-color: rgba(0,0,0,0.08);
+        border-top-style: solid;
+      }
+      paper-button {
+        display: flex;
+        flex-direction: column;
+        text-transform: none;
+        outline: none; /* Remove outline for Safari. */
+      }
+    </style>
+
+    <brum-global-variable key="userData" value="{{storedUserData}}"></brum-global-variable>
+    
+    <div class="server-list-container">
+      <div class="flex-column-container" hidden$="[[!shouldShowZeroState]]">
+        <div class="flex-column-container">
+          <!-- One-Click Connect with DEtected Access Key -->
+          <paper-button noink on-tap="_customAddServer">
+            <server-connection-viz state="ZERO_STATE" root-path="[[rootPath]]"></server-connection-viz>
+            <!-- <div class="header">[[localize('server-add')]]</div> -->
+            <!-- <div class="subtle">[[localize('server-add-zero-state-instructions')]]</div> -->
+
+            <!-- TODO Add localization / DONE -->
+            <div class="header">[[localize("not-connected-to-server")]]</div>
+            <!-- TODO Add more info -->
+            <!-- <div class="subtle">Click to connect to server</div> -->
+
+          </paper-button>
+        </div>
+
+        <!-- Remove the "Don't have a server footer" -->
+        <!-- <div class="footer subtle" inner-h-t-m-l="[[localize('server-create-your-own-zero-state', 'breakLine', '<br/>', 'openLink', '<a href=https://s3.amazonaws.com/outline-vpn/index.html>', 'closeLink', '</a>')]]">
+        </div> -->
+      </div>
+      <user-comms-dialog id="autoConnectDialog" localize="[[localize]]" title-localization-key="auto-connect-dialog-title" detail-localization-key="auto-connect-dialog-detail" fire-event-on-hide="AutoConnectDialogDismissed"></user-comms-dialog>
+      <server-list id="serverList" hidden$="[[shouldShowZeroState]]" servers="{{servers}}" localize="[[localize]]" root-path="[[rootPath]]"></server-list>
+      
+
+      
+      
+      <!-- <add-server-view hidden id="customAddServerView"></add-server-view> -->
+    </div>
+
+  </template>
+
+  <script>
+    'use strict';
+    Polymer({
+      is: 'servers-view',
+      properties: {
+        localize: Function,
+        rootPath: String,
+        servers: Array,
+        serverConfig: Object,
+        storedUserData: Object,
+        shouldShowZeroState: {
+          type: Boolean,
+          computed: '_computeShouldShowZeroState(servers)'
+        },
+        overviewData: {
+          type: Object,
+          computed: '_computeOverviewData()'
+        }
+      },
+      _computeShouldShowZeroState: function (servers) {
+        return !!servers ? servers.length === 0 : false;
+      },
+      _requestPromptAddServer: function() {
+        this.fire('PromptAddServerRequested', {});
+      },
+      _customAddServer: function() {
+        // we don't need the serverConfig at this point, just the accessKey
+        // this.serverConfig.accessKey = this.storedUserData.sslink;
+        // this.$.customAddServerView._addDetectedServer();
+
+        // this will generate the serverConfig from the access key
+        // this.fire('AddServerConfirmationRequested', {accessKey: this.storedUserData.sslink});
+
+        // Custom event
+        // this.fire('CustomAddServerEvent', {accessKey: this.storedUserData.sslink});
+        // this.fire('AddServerRequested', {serverConfig: this.serverConfig});
+      },
+      _computeOverviewData: function() {
+        console.log("Stored User Object: ", this.storedUserData);
+      },
+      customSetServerConfig: function(accessKey, serverConfig) {
+        if (!accessKey || !serverConfig) {
+          throw new Error('Something is wrong with the server configuration.');
+        }
+        serverConfig.accessKey = accessKey;
+        this.serverConfig = serverConfig;
+        this.fire('AddServerRequested', {serverConfig: this.serverConfig});
+      }
+    });
+
+  </script>
+</dom-module>

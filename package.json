@@ -1,0 +1,70 @@
+{
+  "name": "verbraucher-client",
+  "productName": "VerbraucherVPN",
+  "version": "1.0.0",
+  "description": "VerbraucherVPN is a privacy-enhancing project created by Verbraucherschutz.de to provide consumers, news organizations and journalists with more secure access to the Internet.",
+  "scripts": {
+    "clean": "rm -rf build www node_modules platforms/* plugins/*",
+    "postinstall": "bower install || echo no bower needed",
+    "do": "bash ./scripts/do_action.sh"
+  },
+  "__COMMENTS__": [
+    "Do not upgrade to Cordova 7 without fixing the resulting breakages"
+  ],
+  "dependencies": {
+    "@sentry/electron": "^0.15.0",
+    "ShadowsocksConfig": "Jigsaw-Code/outline-shadowsocksconfig#^v0.0.9",
+    "auto-launch": "^5.0.5",
+    "electron-promise-ipc": "^1.0.0",
+    "electron-updater": "3.2.3",
+    "fs-extra": "^7.0.0",
+    "raven": "^2.2.1",
+    "raven-js": "^3.20.1",
+    "socks": "^1.1.10",
+    "sudo-prompt": "^8.2.0",
+    "uuid": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/auto-launch": "^5.0.0",
+    "@types/cordova-plugin-device": "^0.0.3",
+    "@types/jasmine": "^2.8.6",
+    "@types/node": "^8.0.53",
+    "@types/polymer": "^1.2.6",
+    "@types/raven": "^2.1.2",
+    "@types/semver": "^5.5.0",
+    "@types/uuid": "^3.4.0",
+    "babel-core": "^6.26.0",
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "babelify": "^8.0.0",
+    "bower": "^1.8.4",
+    "browserify": "^14.4.0",
+    "clang-format": "^1.0.55",
+    "cordova": "^6.5.0",
+    "cordova-custom-config": "^5.0.2",
+    "electron": "2.0.16",
+    "electron-builder": "20.34.0",
+    "electron-icon-maker": "^0.0.4",
+    "gulp": "^4.0.0",
+    "gulp-babel": "^7.0.0",
+    "gulp-if": "^2.0.2",
+    "gulp-posthtml": "^3.0.4",
+    "gulp-replace": "^0.6.1",
+    "gulp-util": "^3.0.8",
+    "husky": "^1.3.1",
+    "jasmine": "^3.0.0",
+    "polymer-build": "^2.1.1",
+    "postcss-rtl": "^1.2.3",
+    "posthtml-postcss": "^0.2.6",
+    "tslint": "^5.12.0",
+    "typescript": "~3.1.0",
+    "vinyl-source-stream": "^2.0.0",
+    "xml2js": "^0.4.17"
+  },
+  "main": "build/electron/electron/index.js",
+  "husky": {
+    "hooks": {
+      "pre-commit": "yarn tslint --fix 'src/**/*.ts' && yarn git-clang-format"
+    }
+  }
+}

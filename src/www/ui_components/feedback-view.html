@@ -1,0 +1,281 @@
+<!--
+  Copyright 2018 The Outline Authors
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/paper-input/paper-textarea.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../bower_components/iron-input/iron-input.html">
+<!-- begin: dropdown menu dependencies -->
+<link rel="import" href="../bower_components/paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="../bower_components/paper-listbox/paper-listbox.html">
+<link rel="import" href="../bower_components/paper-item/paper-item.html">
+<!-- Ensure Web Animations polyfill is loaded since neon-animation 2.0 doesn't import it -->
+<!-- ref: https://github.com/PolymerElements/paper-dropdown-menu/#changes-in-20 -->
+<link rel="import" href="../bower_components/neon-animation/web-animations.html">
+<!-- end: dropdown menu dependencies -->
+
+<dom-module id="feedback-view">
+  <template>
+    <style>
+      :host {
+        background: #EFEFEF;
+        text-align: center;
+        width: 100%;
+        padding: 0 8px;
+      }
+      :host a {
+        color: #009688;
+      }
+      paper-card {
+        display: block;
+        text-align: left;
+        margin: 8px auto;
+        max-width: 550px;
+      }
+      paper-input, paper-textarea, paper-dropdown-menu {
+        text-align: left;
+        --paper-input-container-focus-color: #009688;
+      }
+      paper-dropdown-menu {
+        width: 100%;
+      }
+      paper-item:not([disabled]) {
+        cursor: pointer;
+      }
+      .card-actions {
+        text-align: right;
+      }
+      #submitButton {
+        margin: 0;
+      }
+      .info {
+        font-weight:300;
+        font-size: 12px;
+        color: #999;
+        line-height: 125%;
+        text-align: left;
+      }
+      input {
+        width: 100%;
+        border: none;
+        outline: none;
+      }
+      #feedbackBox {
+        margin-top: 20px;
+        padding: 10px;
+      }
+
+      #feedbackBox.error {
+        border: 3px solid #ff0000;
+      }
+
+      #feedbackBox.success {
+        border: 3px solid #00ff00;
+      }
+    </style>
+
+    <iron-ajax
+      id="submitFeedbackAjax"
+      method="post"
+      url="https://evening-falls-64388.herokuapp.com/api/v1/feedback"
+      content-type="application/json"
+      handle-as="text"
+      on-response="_handlesubmitFeedbackResponse"
+      on-error="_handlesubmitFeedbackError">
+    </iron-ajax>
+
+    <paper-card>
+      <div class="card-content">
+        <div id="formContainer" style="-webkit-text-size-adjust: 100%;">
+          <paper-textarea id="feedback" name="feedback" label="Your feedback" rows="3" onkeydown="this.invalid = false;" required></paper-textarea>
+        </div>
+
+        <!-- <paper-input id="email" type="email" name="email" label="[[localize('email-feedback-input')]]" on-value-changed="_emailValueChanged"  onkeydown="this.invalid = false;"></paper-input> -->
+        <!-- <p class="info" hidden$=[[!shouldShowLanguageDisclaimer]]>[[localize('feedback-language-disclaimer')]]</p> -->
+        <p class="info" inner-h-t-m-l="[[localize('feedback-privacy', 'privacyPolicyLinkOpen', '<a href=https://s3.amazonaws.com/outline-vpn/index.html#/en/support/dataCollection>', 'privacyPolicyLinkClose', '</a>')]]"></p>
+      </div>
+      <div class="card-actions">
+        <paper-button id="feedbackSubmitButton" on-tap="_submitFeedback" disabled$="[[submitting]]">[[submitButtonLabel]]</paper-button>
+      </div>
+    </paper-card>
+    <div id="feedbackBox" hidden></div>
+  </template>
+  <script>
+    'use strict';
+    Polymer({
+      is: 'feedback-view',
+      properties: {
+        // Need to declare localize function passed in from parent, or else
+        // localize() calls within the template won't be updated
+        localize: Function,
+        category: {
+          type: String,
+          value: 'general',
+        },
+        hasEnteredEmail: {
+          type: Boolean,
+          value: false,
+        },
+        shouldShowLanguageDisclaimer: {
+          type: Boolean,
+          computed: '_computeShouldShowLanguageDisclaimer(hasEnteredEmail)',
+        },
+        submitting: {
+          type: Boolean,
+          value: false
+        },
+        submitButtonLabel: {
+          type: String,
+          computed: '_computeSubmitButtonLabel(submitting, localize)'
+        },
+        formData: {
+          type: Object,
+          value: {
+            email: "",
+            message: ""
+          }
+        },
+        userErrors: {
+          type: Object,
+          value: {}
+        }
+      },
+      ready: function () {
+        var appRoot = Polymer.dom(this).getOwnerRoot().host;
+        window.addEventListener('location-changed', function () {
+          if (appRoot.page !== 'feedback') return;
+          // Workaround: https://github.com/PolymerElements/paper-dropdown-menu/issues/159#issuecomment-229958448
+          // if (!this.$.dropdownMenu.value) {
+          //   var tmp = this.$.categoryList.selected;
+          //   this.$.categoryList.selected = undefined;
+          //   this.$.categoryList.selected = tmp;
+          // }
+        }.bind(this));
+      },
+      _emailValueChanged: function() {
+        // this.hasEnteredEmail = !!this.$.email.value;
+      },
+      _computeSubmitButtonLabel: function (submitting, localize) {
+        // If localize hasn't been defined yet, just return '' for now - Polymer will call this
+        // again once localize has been defined at which point we will return the right value.
+        if (!localize) return '';
+        var label = submitting ? 'submitting' : 'submit';
+        return this.localize(label);
+      },
+      // Returns whether the window's locale is English (i.e. EN, en-US) and the user has
+      // entered their email address.
+      _computeShouldShowLanguageDisclaimer: function (hasEnteredEmail) {
+        return !window.navigator.language.match(/^en/i) && hasEnteredEmail;
+      },
+      getValidatedFormData: function () {
+        var inputs = [this.$.categoryList, this.$.feedback, this.$.email];
+        for (var i = 0, input = inputs[i]; input; input = inputs[++i]) {
+          if (input.validate && !input.validate()) {
+            // The input.validate() call gives the input "invalid" styles if it's invalid,
+            // so the user can see they have to fix it.
+            console.debug('input invalid:', input);
+            return;
+          }
+        }
+        return {
+          // category: this.category,
+          // feedback: this.$.feedback.value,
+          // email: this.$.userEmail.value
+        };
+      },
+      resetForm: function () {
+        // this.$.categoryList.category = 'general';
+        // this.$.feedback.value = '';
+        // this.$.email.value = '';
+      },
+      _submitFeedback: function() {
+        // alert("Would now submit feedback");
+        console.log(this.formData.email);
+        this._resetFeedbackBox();
+        
+        // adding the email type to the HTML seems to have got rid of the need for this, but I'll leave it here for now
+        const email = JSON.parse(localStorage.getItem("user-data")).email;
+        const feedback = this.$.feedback.value ? this._removeWhiteSpace(this.$.feedback.value) : "";
+
+        if(!feedback || feedback == "") {
+          this.fire("ShowToast", {
+            text: this.localize("feedback-error-no-input"), 
+            duration: 5000 
+          });
+          return;
+        }
+    
+        this.formData.email = email;
+        this.formData.message = this.$.feedback.value;
+        this._setRequestBody();
+        this.$.feedbackBox.innerHTML = "";
+        this.$.submitFeedbackAjax.generateRequest();
+        
+      },
+      _handlesubmitFeedbackResponse: function(event) {
+        var response = JSON.parse(event.detail.response);
+        this.fire("ShowToast", {
+          text: this.localize("feedback-thanks"), 
+          duration: 5000 
+        });
+        // reset
+        this.$.feedback.value = this.formData.message =  "";
+      },
+      _handlesubmitFeedbackError: function(event) {
+        const xhr = event.detail.request.xhr;
+        const status = xhr.status;
+
+        if(status == 0){
+          // Could not connect to server
+          this.userErrors.feedbackError = this.localize("login-error-no-connection");
+        }else if(status == 401){
+          // Email is not in database
+          const res = JSON.parse(xhr.response);
+          const errorMessage = res.message;
+          this.userErrors.feedbackError = errorMessage;
+        }else{
+          // Something's wrong. Too lazy to figure out what
+          this.userErrors.feedbackError = this.localize("feedback-error-something-wrong");
+        }
+
+        this.fire("ShowToast", {
+          text: this.userErrors.feedbackError, 
+          duration: 5000 
+        });
+        this.userErrors.feedbackError = "";
+      },
+      _removeWhiteSpace: function(s) {
+        const arr = s.split("");
+        const nArr = [];
+        for (let i = 0; i < arr.length; i++) {
+          if(arr[i] != ""){
+            nArr.push(arr[i]);
+          }
+        }
+        
+        return nArr.join("");
+      },
+      _setRequestBody: function() {
+        this.$.submitFeedbackAjax.body = JSON.stringify(this.formData);
+      },
+      _resetFeedbackBox: function() {
+        this.$.feedbackBox.removeAttribute("class");
+      }
+    });
+  </script>
+</dom-module>

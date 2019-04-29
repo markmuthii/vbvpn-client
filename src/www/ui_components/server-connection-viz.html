@@ -1,0 +1,407 @@
+<!--
+  Copyright 2018 The Outline Authors
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/paper-ripple/paper-ripple.html">
+
+<dom-module id="server-connection-viz">
+  <template>
+    <style>
+      /* Do not mirror animation for RTL languages */
+      /* rtl:begin:ignore */
+      /* @keyframes rotate-with-pause {
+        0% {
+          transform: rotate(0deg);
+        }
+        60%, 100% {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes rotate-backward-with-pause {
+        0% {
+          transform: rotate(360deg);
+        }
+        60%, 100% {
+          transform: rotate(0deg);
+        }
+      } */
+      @keyframes rotate {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes rotate-back {
+        0% {
+          transform: rotate(360deg);
+        }
+        100% {
+          transform: rotate(0deg);
+        }
+      }
+
+      :host {
+        margin: 0 auto;
+      }
+
+      #container {
+        border-radius: 80px;
+        margin: 0 auto;
+        /* position: relative; */
+        text-align: center;
+      }
+
+      #connect-viz {
+        margin: 0 auto;
+      }
+
+      img {
+        position: absolute;
+        display: inline-block;
+        transition-timing-function: ease-out;
+        transition-duration: 1s;
+      }
+
+      .grey.DISCONNECTED {
+        opacity: 1.0;
+      }
+
+      .grey.CONNECTED {
+        display: none;
+        opacity: 0;
+      }
+
+      .grey.DISCONNECTING {
+        opacity: 0.8;
+      }
+
+      .grey.ZERO_STATE, .red.ZERO_STATE, .red.DISCONNECTED,
+      .red.CONNECTING, .red.RECONNECTING, .red.DISCONNECTING {
+        display: none;
+        opacity: 0;
+      }
+
+      .red.CONNECTED {
+        opacity: 1.0;
+      }
+
+      #sm.CONNECTING, #sm-grey.CONNECTING,
+      #sm.RECONNECTING, #sm-grey.RECONNECTING {
+        animation: rotate-with-pause 1.75s ease-out infinite;
+      }
+
+      #md.CONNECTING, #md-grey.CONNECTING,
+      #md.RECONNECTING, #md-grey.RECONNECTING {
+        animation: rotate-with-pause 1.75s ease-out 250ms infinite;
+      }
+
+      #lg.CONNECTING, #lg-grey.CONNECTING,
+      #lg.RECONNECTING, #lg-grey.RECONNECTING {
+        animation: rotate-with-pause 1.75s ease-out 500ms infinite;
+      }
+
+      #sm.DISCONNECTING, #sm-grey.DISCONNECTING {
+        animation: rotate-backward-with-pause 1.75s ease-out infinite;
+      }
+
+      #md.DISCONNECTING, #md-grey.DISCONNECTING {
+        animation: rotate-backward-with-pause 1.75s ease-out 250ms infinite;
+      }
+
+      #lg.DISCONNECTING, #lg-grey.DISCONNECTING {
+        animation: rotate-backward-with-pause 1.75s ease-out 500ms infinite;
+      }
+
+      #sm, #sm-grey {
+        top:  60px;
+        left: 60px;
+        height: 40px;
+        width:  40px;
+        z-index: 300;
+      }
+
+      #md, #md-grey {
+        top:  30px;
+        left: 30px;
+        height: 100px;
+        width:  100px;
+        transition-delay: 250ms;
+        z-index: 200;
+      }
+
+      #lg, #lg-grey, #lg-zero {
+        top:  0;
+        left: 0;
+        height: 160px;
+        width:  160px;
+        transition-delay: 500ms;
+        z-index: 100;
+      }
+
+      #lg {
+        position: relative;
+      }
+
+      #lg-zero {
+        opacity: 0;
+      }
+
+      #lg-zero.ZERO_STATE {
+        opacity: 1;
+      }
+
+      #ripple {
+        color: #29353B;
+        height: 160px;
+        pointer-events: none;
+        z-index: 400;
+      }
+
+      #connect-viz__circle{
+        transform-origin: 50% 50%;
+        /* -webkit-transform-origin: 50% 60%;
+        -wekit-transform-origin: 50% 50%;
+        -o-transform-origin: 50% 50%;
+        -ms-transform-origin: 50% 50%; */
+      }
+      #connect-viz__circle.win32 {
+        transform-origin: 50% 60%;
+        -webkit-transform-origin: 50% 60%;
+      }
+      #connect-viz__circle.CONNECTING, 
+      #connect-viz__circle.RECONNECTING  {
+        animation: rotate 1.5s ease-out infinite;
+      }
+      #connect-viz__circle.DISCONNECTING {
+        animation: rotate-back 1.5s ease-out infinite;      
+      }
+
+      @media(min-height: 600px) {
+        #sm, #sm-grey {
+          top:  72px;
+          left: 72px;
+          height: 48px;
+          width:  48px;
+        }
+
+        #md, #md-grey {
+          top:  36px;
+          left: 36px;
+          height: 120px;
+          width:  120px;
+        }
+
+        #lg, #lg-grey, #lg-zero {
+          top:  0;
+          left: 0;
+          height: 192px;
+          width:  192px;
+        }
+      }
+      /* rtl:end:ignore */
+
+    </style>
+    <div id="container">
+      <span class$="grey {{animationState}}">
+        <?xml version="1.0" encoding="utf-8"?>
+        <svg id="connect-viz" version="1.1" xmlns="http://www.w3.org/2000/svg" width="50%" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 400 400" enable-background="new 0 0 400 400" xml:space="preserve">
+          <!-- <g>
+            <g id="connect-viz__circle" class$="{{animationState}} {{platform}}">
+              <path fill="#9D9E9E" d="M200.001,0C90.204,0,0.888,89.34,0.888,199.113c0,50.576,18.971,96.849,50.172,131.997l32.227-32.181
+                c-23.015-26.864-36.94-61.75-36.94-99.816c0-84.725,68.928-153.654,153.654-153.654c84.72,0,153.651,68.93,153.651,153.654
+                c0,35.578-12.155,68.401-32.565,94.484l32.299,32.346c28.549-34.477,45.725-78.691,45.725-126.83
+                C399.112,89.34,309.796,0,200.001,0z"/>
+            </g>
+            <g id="connect-viz__center">
+              <path fill="#9D9E9E" d="M233.741,128.278c0,18.631-15.105,33.738-33.742,33.738c-18.637,0-33.742-15.106-33.742-33.738
+                c0-18.637,15.105-33.742,33.742-33.742C218.636,94.536,233.741,109.641,233.741,128.278z"/>
+              <polygon fill="#9D9E9E" points="307.068,182.172 307.068,224.042 253.231,224.042 253.231,324.531 216.748,324.531 
+                216.748,253.95 180.857,253.95 180.857,324.531 143.773,324.531 143.773,224.042 92.93,224.042 92.93,182.172 			"/>
+            </g>
+          </g> -->
+          <g>
+            <g id="connect-viz__circle" class$="{{animationState}} {{platform}}">
+              <path fill="#878787" d="M200,1.013C90.363,1.013,1.178,90.224,1.178,199.836c0,50.504,18.943,96.708,50.098,131.806l32.182-32.134
+                c-22.98-26.825-36.887-61.661-36.887-99.672c0-84.602,68.828-153.431,153.43-153.431c84.598,0,153.43,68.829,153.43,153.431
+                c0,35.526-12.139,68.302-32.519,94.348l32.252,32.299c28.508-34.428,45.659-78.579,45.659-126.646
+                C398.822,90.224,309.636,1.013,200,1.013z"/>
+            </g>
+            <g id="connect-viz__center">
+              <path fill="#878787" d="M233.691,129.104c0,18.605-15.082,33.688-33.692,33.688c-18.609,0-33.693-15.082-33.693-33.688
+                c0-18.609,15.084-33.693,33.693-33.693C218.609,95.411,233.691,110.495,233.691,129.104z"/>
+              <polygon fill="#878787" points="306.911,182.92 306.911,224.729 253.154,224.729 253.154,325.071 216.725,325.071 
+                216.725,254.593 180.885,254.593 180.885,325.071 143.854,325.071 143.854,224.729 93.085,224.729 93.085,182.92 		"/>
+            </g>
+          </g>
+        </svg>
+      </span>
+      <span class$="red {{animationState}}">
+        <?xml version="1.0" encoding="utf-8"?>
+        <svg version="1.0" id="Layer_2" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="50%" viewBox="0 0 400 400" enable-background="new 0 0 400 400" xml:space="preserve">
+          <g>
+            <!-- <g>
+              <g>
+                <path fill="#CB1B1B" d="M382.06,153.863c-9.085,13.221-20.951,25.65-34.861,36.578c4.005,13.665,6.152,28.111,6.152,43.052
+                  c0,35.507-12.132,68.265-32.501,94.297l32.234,32.284c28.492-34.41,45.636-78.537,45.636-126.581
+                  C398.72,205.195,392.773,178.253,382.06,153.863z M200.001,34.771C90.421,34.771,1.28,123.936,1.28,233.493
+                  c0,50.475,18.931,96.656,50.072,131.736l32.166-32.115c-22.972-26.812-36.869-61.632-36.869-99.621
+                  c0-84.56,68.792-153.353,153.352-153.353c18.503,0,36.248,3.295,52.684,9.328V51.046l14.097-0.64
+                  c2.852-0.128,5.639-0.439,8.339-0.895C251.936,40.014,226.568,34.771,200.001,34.771z"/>
+                <g>
+                  <path fill="#CB1B1B" d="M233.674,162.797c0,18.596-15.074,33.671-33.675,33.671s-33.676-15.075-33.676-33.671
+                    c0-18.6,15.075-33.676,33.676-33.676S233.674,144.197,233.674,162.797z"/>
+                  <polygon fill="#CB1B1B" points="306.856,216.584 306.856,258.375 253.127,258.375 253.127,358.664 216.715,358.664 
+                    216.715,288.221 180.895,288.221 180.895,358.664 143.883,358.664 143.883,258.375 93.14,258.375 93.14,216.584 					"/>
+                </g>
+              </g>
+              <g>
+                <path fill="#004E7A" d="M324.723,42.684c0,0-24.359,20.879-57.172,22.371v57.668c0,0,10.44,35.299,57.172,65.623
+                  c46.73-30.324,57.17-65.623,57.17-65.623V65.055C349.081,63.563,324.723,42.684,324.723,42.684z"/>
+                <path fill="#FFFFFF" d="M323.084,91.492c-1.476,0-2.914,0.145-4.309,0.393c-12.758,1.67-23.858,8.643-31.035,18.619
+                  c-1.143,1.588-2.196,3.27-3.134,5.001c0.938,1.755,1.991,3.423,3.134,5.022c7.177,9.985,18.283,16.936,31.035,18.615
+                  c1.395,0.252,2.833,0.393,4.309,0.393c0.235,0,0.465-0.012,0.688-0.012c0.321,0,0.638,0.012,0.948,0.012
+                  c15.215,0,28.707-7.506,36.973-19.008c1.158-1.6,2.202-3.268,3.146-5.022c-0.943-1.731-1.987-3.413-3.146-5.001
+                  c-8.266-11.502-21.758-19.012-36.973-19.012c-0.311,0-0.627,0-0.948,0.012C323.549,91.492,323.319,91.492,323.084,91.492z
+                  M319.586,134.172c-0.006,0-0.017,0-0.017,0c-8.796-1.656-15.465-9.393-15.465-18.667c0-9.253,6.669-17.005,15.465-18.649
+                  c0,0,0.011-0.011,0.017-0.011c1.358-0.165,2.752-0.271,4.148-0.308c10.173,0.343,18.336,8.723,18.336,18.968
+                  c0,10.265-8.163,18.635-18.336,18.985C322.338,134.459,320.944,134.346,319.586,134.172z M290.421,115.505
+                  c3.096-4.908,7.215-9.124,12.058-12.306c-2.166,3.596-3.414,7.814-3.414,12.306c0,4.5,1.248,8.718,3.414,12.325
+                  C297.636,124.625,293.517,120.429,290.421,115.505z M359.024,115.505c-4.186,6.649-10.251,12.011-17.438,15.313
+                  c3.438-4.157,5.525-9.496,5.525-15.313c0-5.81-2.087-11.141-5.525-15.293C348.773,103.516,354.839,108.865,359.024,115.505z"/>
+              </g>
+            </g> -->
+
+            <g>
+              <g>
+                <path fill="#CB1B1B" d="M382.169,120.164c-9.091,13.228-20.965,25.665-34.882,36.599c4.008,13.674,6.154,28.129,6.154,43.079
+                  c0,35.526-12.139,68.305-32.52,94.354l32.253,32.302c28.51-34.432,45.664-78.584,45.664-126.655
+                  C398.839,171.526,392.889,144.567,382.169,120.164z M200.001,1C90.355,1,1.161,90.218,1.161,199.842
+                  c0,50.505,18.942,96.714,50.103,131.813l32.186-32.135c-22.985-26.826-36.892-61.668-36.892-99.679
+                  c0-84.612,68.833-153.444,153.443-153.444c18.515,0,36.27,3.295,52.715,9.334V17.285l14.105-0.641
+                  c2.854-0.128,5.642-0.44,8.343-0.896C251.967,6.247,226.584,1,200.001,1z"/>
+                <g>
+                  <circle fill="#CB1B1B" cx="199.999" cy="129.103" r="33.696"/>
+                  <polygon fill="#CB1B1B" points="306.921,182.92 306.921,224.737 253.158,224.737 253.158,325.086 216.724,325.086 
+                    216.724,254.601 180.883,254.601 180.883,325.086 143.848,325.086 143.848,224.737 93.075,224.737 93.075,182.92 			"/>
+                </g>
+              </g>
+              <g>
+                <path fill="#004E7A" d="M324.798,8.917c0,0-24.374,20.892-57.207,22.385v57.703c0,0,10.446,35.32,57.207,65.662
+                  c46.759-30.342,57.203-65.662,57.203-65.662V31.302C349.17,29.809,324.798,8.917,324.798,8.917z"/>
+                <path fill="#FFFFFF" d="M323.158,57.755c-1.477,0-2.916,0.145-4.313,0.393c-12.764,1.67-23.872,8.647-31.054,18.629
+                  c-1.143,1.59-2.196,3.272-3.136,5.005c0.939,1.756,1.993,3.424,3.136,5.026c7.182,9.991,18.294,16.947,31.054,18.627
+                  c1.396,0.25,2.836,0.393,4.313,0.393c0.234,0,0.465-0.013,0.688-0.013c0.322,0,0.639,0.013,0.949,0.013
+                  c15.225,0,28.725-7.51,36.995-19.02c1.159-1.603,2.203-3.271,3.147-5.026c-0.944-1.732-1.988-3.415-3.147-5.005
+                  c-8.271-11.508-21.771-19.021-36.995-19.021c-0.311,0-0.627,0-0.949,0.011C323.623,57.755,323.393,57.755,323.158,57.755z
+                   M319.658,100.46c-0.008,0-0.018,0-0.018,0c-8.801-1.656-15.475-9.398-15.475-18.679c0-9.259,6.674-17.015,15.475-18.659
+                  c0,0,0.01-0.012,0.018-0.012c1.359-0.166,2.753-0.271,4.15-0.308c10.179,0.343,18.347,8.728,18.347,18.979
+                  c0,10.271-8.168,18.647-18.347,18.998C322.411,100.747,321.018,100.634,319.658,100.46z M290.475,81.781
+                  c3.098-4.911,7.22-9.129,12.064-12.313c-2.166,3.598-3.416,7.82-3.416,12.313c0,4.503,1.25,8.722,3.416,12.333
+                  C297.694,90.908,293.572,86.71,290.475,81.781z M359.119,81.781c-4.188,6.653-10.256,12.019-17.449,15.323
+                  c3.441-4.16,5.529-9.502,5.529-15.323c0-5.813-2.088-11.146-5.529-15.302C348.863,69.784,354.932,75.138,359.119,81.781z"/>
+              </g>
+            </g>
+          </g>
+        </svg>
+      </span>
+    </div>
+  </template>
+  <script>
+    'use strict';
+
+    Polymer({
+      is: 'server-connection-viz',
+      properties: {
+        rootPath: String,
+        state: {
+          type: String,
+          observer: '_onStateChanged'
+        },
+        animationState: {
+          type: String,
+          notify: true,
+          value: 'ZERO_STATE'
+        },
+        platform: {
+          type: String,
+          computed: '_computePlatform()'
+        }
+      },
+      _onStateChanged: function _onStateChanged(newState) {
+        this._updateAnimationState();
+        this._updateRippleEffect();
+      },
+      _ANIMATION_DURATION_MS: 1750, // Update CSS when modifying the animation duration.
+      _animationStartMs: null,
+      _updateAnimationState: function() {
+        if (this._isAnimating(this.state)) {
+          this._animationStartMs = new Date().getTime();
+        }
+        if (this.state === 'CONNECTED' || this.state === 'DISCONNECTED') {
+          if (this._isAnimating(this.animationState)) {
+            var now = new Date().getTime();
+            var elapsedAnimationMs = now - this._animationStartMs;
+            var remainingAnimationMs =
+                this._ANIMATION_DURATION_MS - (elapsedAnimationMs % this._ANIMATION_DURATION_MS);
+            // Update the state only after the animation cycle has finished to avoid jumpiness.
+            var _this = this;
+            this.async(function () {
+              _this.animationState = _this.state;
+            }, remainingAnimationMs);
+            return;
+          }
+        }
+        this.animationState = this.state;
+      },
+      _rippleInterval: null,
+      _updateRippleEffect: function() {
+        if (this._rippleInterval) {
+          clearInterval(this._rippleInterval);
+          this._rippleInterval = null;
+        }
+        // if (this._isAnimating(this.state)) {
+        //   this._rippleInterval = setInterval(function () {
+        //     this.$.ripple.initialOpacity = 0.1;
+        //     this.$.ripple.opacityDecayVelocity = 0.3;
+        //     this.$.ripple.simulatedRipple();
+        //   }.bind(this), 1500);
+        // }
+      },
+      _isAnimating: function(state) {
+        return state === 'CONNECTING' || state === 'DISCONNECTING' || state === 'RECONNECTING';
+      },
+      _computePlatform: function() {
+        // 
+        if (window.hasOwnProperty('cordova')) {
+          // Wait until Cordova is ready to access the device plugin. This listener will execute
+          // synchronously if the 'deviceready' event has already fired.
+          document.addEventListener('deviceready', function() {
+            return device.platform;
+          }.bind(this));
+
+        } else {
+          // If cordova is not defined, we're running in Electron.
+          const os = require("os");
+          // this.platform = 'Electron';
+          console.log("Platform: ", os.platform);
+          return os.platform();
+        }
+        
+      }
+    });
+  </script>
+</dom-module>
